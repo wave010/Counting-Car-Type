@@ -1,0 +1,23 @@
+# PyCharm files and directories
+.idea/
+*.iml
+*.iws
+*.ipr
+*.iws
+*.log
+*.log.*
+*.pyt
+
+# no file video
+*.mp4
+
+
+# Virtual environment
+venv/
+
+# Python bytecode
+__pycache__/
+
+# Compiled Python files
+*.pyc
+*.pyo

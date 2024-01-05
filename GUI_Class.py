@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import *
+from tkinter import messagebox
 from PIL import Image, ImageTk
 from tkinter.ttk import Combobox
 from tkinter import filedialog
@@ -12,6 +13,7 @@ import pandas as pd
 
 from datetime import datetime, timedelta
 import pymongo
+
 
 class MyApp:
     def __init__(self,  root):
@@ -30,7 +32,7 @@ class MyApp:
         # Dictionary to store different pages
         self.pages = {}
 
-        # Create andadd pages to the dictionary
+        # Create and add pages to the dictionary
         for PageClass in (Home, Setting, CountVideo, CountCamera):
             page_name = PageClass.__name__
             page = PageClass(self.container, self)
@@ -145,7 +147,7 @@ class CountVideo(tk.Frame):
         # read mask image
         imgMask = cv2.imread(self.path_var.get())
 
-        # create log DataFrmae
+        # create log DataFrame
         cols = ['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy']
         self.log_df = pd.DataFrame(columns=cols)
 
@@ -183,7 +185,7 @@ class CountVideo(tk.Frame):
         tabel_frame = Frame(self)
         tabel_frame.grid(row=3, column=3)
 
-        Label(tabel_frame, text="Counting Tabel").grid(row=0, column=0, columnspan=1, sticky=NSEW)
+        Label(tabel_frame, text="Counting table").grid(row=0, column=0, columnspan=1, sticky=NSEW)
 
         Label(tabel_frame, text="Passenger car up to 7 people").grid(row=1, column=0, sticky=W, padx=10)
         car_up_7 = Label(tabel_frame, text=str(len(self.count_car_type[7])))
@@ -326,18 +328,22 @@ class CountVideo(tk.Frame):
                 except Exception as e:
                     tk.messagebox.showwarning("Warning!", f"An error occurred: {type(e).__name__} - {e}")
 
-
         def playCountCar():
             if self.cap is None:
                 tk.messagebox.showwarning("Warning!", "Please Select Video")
             else:
+                show = tk.messagebox.askyesno("Show Frame", "Do you want to show video?")
+                img_ = cv2.imread('SourceData/VideoProcessing.png')
+                img_ = cv2.resize(img_, (640, 360))
+                self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                self.image_label['image'] = self.photo_image
                 count_frame = 1
                 self.time_start = datetime.now()
                 while True:
                     ret, frame = self.cap.read()
                     # Check if the frame is empty or invalid
                     if not ret or frame is None:
-                        img_ = cv2.imread('SourceData/Endofcounting.png')
+                        img_ = cv2.imread('SourceData/EndCounting.png')
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
@@ -405,9 +411,9 @@ class CountVideo(tk.Frame):
                                 bicycle.config(text=str(len(self.count_car_type[2])))
                                 motorbike.config(text=str(len(self.count_car_type[11])))
                                 tot_count.config(text=str(len(self.totalCount)))
-
-                    self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
-                    self.image_label['image'] = self.photo_image
+                    if show:
+                        self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
+                        self.image_label['image'] = self.photo_image
                     count_frame += 1 # count number of frame
                     root.update()
                     # Add a delay to control the frame rate
@@ -478,7 +484,7 @@ class CountCamera(tk.Frame):
         tabel_frame = Frame(self)
         tabel_frame.grid(row=3, column=3)
 
-        Label(tabel_frame, text="Counting Tabel").grid(row=0, column=0, columnspan=1, sticky=NSEW)
+        Label(tabel_frame, text="Counting table").grid(row=0, column=0, columnspan=1, sticky=NSEW)
 
         Label(tabel_frame, text="Passenger car up to 7 people").grid(row=1, column=0, sticky=W, padx=10)
         car_up_7 = Label(tabel_frame, text=str(len(self.count_car_type[7])))
@@ -547,7 +553,7 @@ class CountCamera(tk.Frame):
                 tk.messagebox.showwarning("Warning!", "Please Select Video")
             else:
                 interval = 10  # Time interval in seconds
-                total_time = 60  # Total time in seconds (1 minute)
+                total_time = 120  # Total time in seconds (1 minute)
                 count_time = 0
 
                 start_time = datetime.now()
@@ -556,7 +562,7 @@ class CountCamera(tk.Frame):
                     ret, frame = self.cap.read()
                     # Check if the frame is empty or invalid
                     if not ret or frame is None:
-                        img_ = cv2.imread('SourceData/Endofcounting.png')
+                        img_ = cv2.imread('SourceData/EndCounting.png')
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
@@ -574,7 +580,7 @@ class CountCamera(tk.Frame):
                     if elapsed_time.total_seconds() >= total_time:
                         print("Program will exit after 1 minutes.")
                         self.cap = None
-                        img_ = cv2.imread('SourceData/Endofcounting.png')
+                        img_ = cv2.imread('SourceData/EndCounting.png')
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
