@@ -4,20 +4,19 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 from tkinter.ttk import Combobox
 from tkinter import filedialog
-
 from tracker import *
 from ultralytics import YOLO
 import cv2
 import cvzone
 import pandas as pd
-
-from datetime import datetime, timedelta
+from datetime import datetime
 import re
 import pymongo
 from configparser import ConfigParser
 
+
 class MyApp:
-    def __init__(self,  root):
+    def __init__(self, root):
         self.root = root
         self.root.title("Counting Car Type Project")
         # ------- variable -----
@@ -141,7 +140,7 @@ class Setting(tk.Frame):
                 tk.messagebox.showinfo("Database", "Pinged your deployment. You successfully connected to MongoDB!")
                 status_DB.config(text="Status : OK")
             except Exception as e:
-                tk.messagebox.showwarning("Database", "Error ! : "+e)
+                tk.messagebox.showwarning("Database", "Error ! : "+ str(e))
                 status_DB.config(text="Status : Error!")
 
         def saveConfig(database, Alltime, EveryTime, PathMask):
@@ -305,7 +304,7 @@ class CountVideo(tk.Frame):
         Button(bu_frame, text="Save to Database", command=lambda: SaveToDatabase()).grid(row=0, column=2, sticky='w', padx=10)
 
         def selectVideo():
-            video_path = filedialog.askopenfilename(filetypes= [
+            video_path = filedialog.askopenfilename(filetypes=[
                 ("all video format", "mp4"),
                 ("all video format", "avi")])
             if len(video_path) > 0:
@@ -357,7 +356,7 @@ class CountVideo(tk.Frame):
                     df_con = self.log_df.groupby(['type_name']).size().reset_index(name='counts')
 
                     with pd.ExcelWriter(file, engine='xlsxwriter') as writer:
-                        df_info.to_excel(writer,sheet_name='video info', index=False)
+                        df_info.to_excel(writer, sheet_name='video info', index=False)
                         self.log_df.to_excel(writer, sheet_name='Counting log', index=False)
                         df_con.to_excel(writer, sheet_name='Summary of car types', index=False)
 
@@ -383,7 +382,7 @@ class CountVideo(tk.Frame):
                         'end_count': self.time_end,
                         'Log': my_dict_log
                     }
-                    x = mycol.insert_one(my_dict_data)
+                    mycol.insert_one(my_dict_data)
                     tk.messagebox.showinfo("DataBase MongoDB", "Successfully inserted into the database")
                 except Exception as e:
                     tk.messagebox.showwarning("Warning!", f"An error occurred: {type(e).__name__} - {e}")
@@ -487,8 +486,18 @@ class CountCamera(tk.Frame):
         self.config = ConfigParser()
         self.config.read("Setting/config.ini")
         self.time, self.time_rec = int(self.config['Config']['all_timecount']), int(self.config['Config']['every_record'])
+        # database
+        uri = self.config['Config']['Database']
+        self.client = pymongo.MongoClient(uri)
+        self.myDatabase = self.client['mydatabase']
+        self.myCollect = self.myDatabase["CountFormCamera"]
+
         # ------------------- for Count ----------------------------------------
         self.cap = None
+
+        self.time_start = None
+        self.time_end = None
+
         # Create Object Model YOLO
         model = YOLO('YOLOModel/CarType_model.pt')
 
@@ -509,14 +518,17 @@ class CountCamera(tk.Frame):
 
         # read mask image
         imgMask = cv2.imread(self.config['Config']['path_mask'])
+
+        # create log DataFrame
+        cols = ['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy']
+        self.log_df = pd.DataFrame(columns=cols)
         # ----------------------------------------------------------------------
 
         # add widget
-        Label(self, text="Counting Car type From Camera", font=('Tomato', 10, 'bold')).grid(row=0, column=0, sticky='N',
-                                                                                           pady=5, columnspan=2)
+        Label(self, text="Counting Car type From Camera", font=('Tomato', 10, 'bold')).grid(row=0, column=0, sticky='N', pady=5, columnspan=2)
 
         # --- Button Select & Play Video
-        Button(self, text="Play", command= lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
+        Button(self, text="Play", command=lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
         path_video_lb = Label(self, text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
         path_video_lb.grid(row=2, column=1, sticky='w')
         # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
@@ -601,8 +613,7 @@ class CountCamera(tk.Frame):
         bu_frame = Frame(self)
         bu_frame.grid(row=17, column=0, sticky='w', padx=10)
 
-        Button(bu_frame, text="Back", command=lambda: controller.show_page("Home")).grid(row=0, column=0, sticky='w'
-                                                                                         , padx=10)
+        Button(bu_frame, text="Back", command=lambda: controller.show_page("Home")).grid(row=0, column=0, sticky='w', padx=10)
         update_label = Label(bu_frame, text="last update database :")
         update_label.grid(row=0, column=1, sticky='w', padx=15)
 
@@ -618,6 +629,11 @@ class CountCamera(tk.Frame):
 
                 start_time = datetime.now()
                 hello_time = datetime.now()
+
+                self.time_start = datetime.now()
+                count_frame = 1
+                Round_ = 1
+
                 while True:
                     ret, frame = self.cap.read()
                     # Check if the frame is empty or invalid
@@ -632,18 +648,51 @@ class CountCamera(tk.Frame):
                     elapsed_hello_time = datetime.now() - hello_time
                     if elapsed_hello_time.total_seconds() >= interval:
                         count_time += 1
-                        update_label.config(text="Hello: "+ str(datetime.now())+ " count: "+ str(count_time))
+
+                        # add to database
+                        self.time_end = datetime.now()
+                        my_dict_log = self.log_df.to_dict(orient='records')
+                        my_dict_data = {
+                            'fps': self.cap.get(cv2.CAP_PROP_FPS),
+                            'start_count': self.time_start,
+                            'end_count': self.time_end,
+                            'total time (s)': self.time,
+                            'each time record (s)': self.time_rec,
+                            'round': Round_,
+                            'Log': my_dict_log
+                        }
+                        self.myCollect.insert_one(my_dict_data)
+
+                        update_label.config(text="Round: "+ str(Round_)+ " Record")
+                        Round_+=1 # update round
                         hello_time = datetime.now()
+
+                        # reset
+                        self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
 
                     # Check if End to Record
                     elapsed_time = datetime.now() - start_time
                     if elapsed_time.total_seconds() >= total_time:
-                        print("Program will exit after 1 minutes.")
-                        self.cap = None
                         img_ = cv2.imread('SourceData/EndCounting.png')
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
+
+                        # add to database
+                        self.time_end = datetime.now()
+                        my_dict_log = self.log_df.to_dict(orient='records')
+                        my_dict_data = {
+                            'fps': self.cap.get(cv2.CAP_PROP_FPS),
+                            'start_count': self.time_start,
+                            'end_count': self.time_end,
+                            'total time (s)': self.time,
+                            'each time record': self.time_rec,
+                            'round': Round_,
+                            'Log': my_dict_log
+                        }
+                        self.myCollect.insert_one(my_dict_data)
+
+                        self.cap = None
                         break
 
                     frame = cv2.resize(frame, (640, 360))
@@ -689,6 +738,11 @@ class CountCamera(tk.Frame):
                             if self.totalCount.count(id) == 0:
                                 self.totalCount.append(id)
                                 self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
+
+                                add_log = pd.DataFrame(
+                                    [[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]],
+                                    columns=cols)
+                                self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
 
                                 # update data on Counting tabel
                                 car_up_7.config(text=str(len(self.count_car_type[7])))
