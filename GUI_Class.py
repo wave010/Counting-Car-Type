@@ -89,9 +89,9 @@ class Setting(tk.Frame):
         DB_entry = Entry(DB_Labelframe, width=50)
         DB_entry.insert(END, "mongodb+srv://thirawat:1234@cluster0.1h6mdye.mongodb.net/?retryWrites=true&w=majority")
         DB_entry.grid(row=1, column=1)
-        connect_DB = Button(DB_Labelframe, text="Connect")
+        connect_DB = Button(DB_Labelframe, text="Connect", command=lambda: Connect(DB_entry.get()))
         connect_DB.grid(row=1, column=2, padx=10)
-        status_DB = Label(DB_Labelframe, text="status : OK")
+        status_DB = Label(DB_Labelframe, text="status : ")
         status_DB.grid(row=2, column=1, sticky="w")
 
         # --- Mask Setting
@@ -133,6 +133,16 @@ class Setting(tk.Frame):
 
         Button(self, text="save", width=10, command=lambda: saveConfig(DB_entry.get(), time_all.get()+" "+type_time.get(), rec_all.get()+" "+rec_time.get(), pathMask)).pack(pady=5)
         Button(self, text="Back to Home", command=lambda: controller.show_page("Home")).pack(pady=5)
+
+        def Connect(DB):
+            client = pymongo.MongoClient(DB)
+            try:
+                client.admin.command('ping')
+                tk.messagebox.showinfo("Database", "Pinged your deployment. You successfully connected to MongoDB!")
+                status_DB.config(text="Status : OK")
+            except Exception as e:
+                tk.messagebox.showwarning("Database", "Error ! : "+e)
+                status_DB.config(text="Status : Error!")
 
         def saveConfig(database, Alltime, EveryTime, PathMask):
             match1 = re.match(r'(\d+)\s*(\w+)', Alltime)
@@ -358,7 +368,7 @@ class CountVideo(tk.Frame):
                 tk.messagebox.showwarning("Warning!", "Play Video")
             else:
                 # Create a new client and connect to the server
-                uri = "mongodb+srv://thirawat:1234@cluster0.1h6mdye.mongodb.net/?retryWrites=true&w=majority"
+                uri = self.config['Config']['Database']
                 client = pymongo.MongoClient(uri)
                 mydb = client['mydatabase']
                 mycol = mydb["CountFormVideo"]
