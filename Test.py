@@ -1,33 +1,47 @@
-import tkinter as tk
-from tkinter import *
+import cv2
+from datetime import datetime, timedelta
 
-root = tk.Tk()
-root.geometry("1000x500")
+cap = cv2.VideoCapture(0)
 
-# add widget
-Label(root, text="Count Setting", font=('Tomato', 20, 'bold')).pack(pady=10)
+# Set the initial time
+start_time = datetime.now()
 
-# --- Connect to Database
-DB_Labelframe = LabelFrame(root, text="Connect to MongoDB Database")
-DB_Labelframe.pack(padx=10, pady=10)
+# Set the time interval for printing "Hello" (1 minutes in this case)
+time_interval = timedelta(minutes=1)
 
-Label(DB_Labelframe, text="Database").grid(row=0, column=0)
-DB_entry = Entry(DB_Labelframe, width=50)
-DB_entry.insert(END, "mongodb+srv://thirawat:1234@cluster0.1h6mdye.mongodb.net/?retryWrites=true&w=majority")
-DB_entry.grid(row=1, column=1)
-connect_DB = Button(DB_Labelframe, text="Connect")
-connect_DB.grid(row=1, column=2, padx=10)
-status_DB = Label(DB_Labelframe, text="status : OK")
-status_DB.grid(row=2, column=1, sticky="w")
+# Set the total duration for the program (2 minutes in this case)
+total_duration = timedelta(minutes=2)
 
-# --- Mask Setting
-Mask_setting = LabelFrame(root, text="Select a mask for counting")
-Mask_setting.pack(padx=10, pady=10)
+while True:
+    # Capture frame-by-frame
+    ret, frame = cap.read()
 
-# Image location (add "/" not "\")
-img = PhotoImage(file="SourceData/maskSetting.png")
+    # Check if it's time to print "Hello"
+    current_time = datetime.now()
+    elapsed_time = current_time - start_time
 
-pathMask = StringVar()
-r1 = Radiobutton(Mask_setting, image=img, variable=pathMask, value="SourceData/maskSetting.png")
-r1.pack()
-root.mainloop()
+    if elapsed_time >= time_interval:
+        print("Hello")
+        # Update the start time for the next interval
+        start_time = current_time
+
+    # if frame is read correctly ret is True
+    if not ret:
+        print("Can't receive frame (stream end?). Exiting ...")
+        break
+
+    # Our operations on the frame come here
+    frame = cv2.resize(frame, (640, 360))
+
+    if elapsed_time >= total_duration:
+        print("Program ending after 2 minutes.")
+        break
+    # Display the resulting frame
+    cv2.imshow('frame', frame)
+
+    if cv2.waitKey(1) == ord('q'):
+        break
+
+# Release the camera and close the window
+cap.release()
+cv2.destroyAllWindows()

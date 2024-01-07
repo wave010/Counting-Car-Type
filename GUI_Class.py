@@ -139,17 +139,17 @@ class Setting(tk.Frame):
             value1, unit1 = match1.groups()
             value1 = int(value1)
             if unit1.startswith('Hrs'):
-                Alltime = timedelta(hours=value1)
+                Alltime = value1 * 3600
             elif unit1.startswith('min'):
-                Alltime = timedelta(minutes=value1)
+                Alltime = value1 * 60
 
             match2 = re.match(r'(\d+)\s*(\w+)', EveryTime)
             value2, unit2 = match2.groups()
             value2 = int(value2)
             if unit2.startswith('Hrs'):
-                EveryTime = timedelta(hours=value2)
+                EveryTime = value2 * 3600
             elif unit2.startswith('min'):
-                EveryTime = timedelta(minutes=value2)
+                EveryTime = value2 * 60
 
             self.config.set('Config', 'database', database)
             self.config.set('Config', 'all_timecount', str(Alltime))
@@ -476,7 +476,7 @@ class CountCamera(tk.Frame):
         self.controller = controller
         self.config = ConfigParser()
         self.config.read("Setting/config.ini")
-        self.time, self.time_rec = self.config['Config']['all_timecount'], self.config['Config']['every_record']
+        self.time, self.time_rec = int(self.config['Config']['all_timecount']), int(self.config['Config']['every_record'])
         # ------------------- for Count ----------------------------------------
         self.cap = None
         # Create Object Model YOLO
@@ -507,7 +507,7 @@ class CountCamera(tk.Frame):
 
         # --- Button Select & Play Video
         Button(self, text="Play", command= lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
-        path_video_lb = Label(self, text="Time all :"+self.time+" Time record: "+self.time_rec)
+        path_video_lb = Label(self, text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
         path_video_lb.grid(row=2, column=1, sticky='w')
         # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
         # ---------------------------------------------------------------
@@ -602,8 +602,8 @@ class CountCamera(tk.Frame):
             if self.cap is None:
                 tk.messagebox.showwarning("Warning!", "Please Select Video")
             else:
-                interval = 10  # Time interval in seconds
-                total_time = 120  # Total time in seconds (2 minute)
+                interval = self.time_rec  # Time interval in seconds
+                total_time = self.time  # Total time in seconds
                 count_time = 0
 
                 start_time = datetime.now()
@@ -618,15 +618,14 @@ class CountCamera(tk.Frame):
                         self.image_label['image'] = self.photo_image
                         break  # Exit the loop if there's an issue with reading frames
 
-                    # Check if 30 seconds have passed
+                    # Check if Every time to Record
                     elapsed_hello_time = datetime.now() - hello_time
                     if elapsed_hello_time.total_seconds() >= interval:
-                        print("Hello")
                         count_time += 1
                         update_label.config(text="Hello: "+ str(datetime.now())+ " count: "+ str(count_time))
                         hello_time = datetime.now()
 
-                    # Check if 1 minute have passed
+                    # Check if End to Record
                     elapsed_time = datetime.now() - start_time
                     if elapsed_time.total_seconds() >= total_time:
                         print("Program will exit after 1 minutes.")
