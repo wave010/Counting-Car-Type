@@ -12,8 +12,9 @@ import cvzone
 import pandas as pd
 
 from datetime import datetime, timedelta
+import re
 import pymongo
-
+from configparser import ConfigParser
 
 class MyApp:
     def __init__(self,  root):
@@ -75,6 +76,8 @@ class Setting(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
+        self.config = ConfigParser()
+        self.config.read("Setting/config.ini")
 
         # add widget
         Label(self, text="Count Setting", font=('Tomato', 20, 'bold')).pack(pady=10)
@@ -83,12 +86,27 @@ class Setting(tk.Frame):
         DB_Labelframe.pack(padx=10, pady=10)
 
         Label(DB_Labelframe, text="Database").grid(row=0, column=0)
-        DB_entry = Entry(DB_Labelframe)
+        DB_entry = Entry(DB_Labelframe, width=50)
+        DB_entry.insert(END, "mongodb+srv://thirawat:1234@cluster0.1h6mdye.mongodb.net/?retryWrites=true&w=majority")
         DB_entry.grid(row=1, column=1)
         connect_DB = Button(DB_Labelframe, text="Connect")
         connect_DB.grid(row=1, column=2, padx=10)
         status_DB = Label(DB_Labelframe, text="status : OK")
         status_DB.grid(row=2, column=1, sticky="w")
+
+        # --- Mask Setting
+        Mask_setting = LabelFrame(self, text="Select a mask for counting")
+        Mask_setting.pack(padx=10, pady=10)
+
+        self.img1 = PhotoImage(file="SourceData/maskSetting.png")
+        self.img2 = PhotoImage(file="SourceData/maskSetting.png")
+
+        pathMask = StringVar()
+        pathMask.set("SourceData/mask_selection.png")
+        r1 = Radiobutton(Mask_setting, image=self.img1, variable=pathMask, value="SourceData/mask_selection.png")
+        r1.grid(row=0, column=0)
+        r2 = Radiobutton(Mask_setting, image=self.img2, variable=pathMask, value="None")
+        r2.grid(row=0, column=1)
 
         # --- Only Count From Camera
         frame_count_cam_info = LabelFrame(self, text="Setting Only Counting Form Camera")
@@ -113,15 +131,45 @@ class Setting(tk.Frame):
         rec_time.current(1)
         rec_time.grid(row=2, column=2, pady=5, padx=5)
 
-        Button(self, text="save", width=10, command=lambda: controller.setting(time_all.get()+" "+type_time.get(), rec_all.get()+""+rec_time.get())).pack(pady=5)
+        Button(self, text="save", width=10, command=lambda: saveConfig(DB_entry.get(), time_all.get()+" "+type_time.get(), rec_all.get()+" "+rec_time.get(), pathMask)).pack(pady=5)
         Button(self, text="Back to Home", command=lambda: controller.show_page("Home")).pack(pady=5)
+
+        def saveConfig(database, Alltime, EveryTime, PathMask):
+            match1 = re.match(r'(\d+)\s*(\w+)', Alltime)
+            value1, unit1 = match1.groups()
+            value1 = int(value1)
+            if unit1.startswith('Hrs'):
+                Alltime = timedelta(hours=value1)
+            elif unit1.startswith('min'):
+                Alltime = timedelta(minutes=value1)
+
+            match2 = re.match(r'(\d+)\s*(\w+)', EveryTime)
+            value2, unit2 = match2.groups()
+            value2 = int(value2)
+            if unit2.startswith('Hrs'):
+                EveryTime = timedelta(hours=value2)
+            elif unit2.startswith('min'):
+                EveryTime = timedelta(minutes=value2)
+
+            self.config.set('Config', 'database', database)
+            self.config.set('Config', 'all_timecount', str(Alltime))
+            self.config.set('Config', 'every_record', str(EveryTime))
+            self.config.set('Config', 'path_mask', PathMask.get())
+
+            # edit config file
+            with open("Setting/config.ini", "w") as configfile:
+                self.config.write(configfile)
+
+            tk.messagebox.showinfo('Save', 'Save Config')
 
 
 class CountVideo(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        self.path_var = StringVar(value="SourceData/mask_selection.png")
+        self.config = ConfigParser()
+        self.config.read("Setting/config.ini")
+
         # ------------------- for Count ----------------------------------------
         self.cap = None
         self.path = None
@@ -145,7 +193,7 @@ class CountVideo(tk.Frame):
         self.totalCount = []
 
         # read mask image
-        imgMask = cv2.imread(self.path_var.get())
+        imgMask = cv2.imread(self.config['Config']['path_mask'])
 
         # create log DataFrame
         cols = ['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy']
@@ -158,7 +206,7 @@ class CountVideo(tk.Frame):
         # --- Button Select & Play Video
         Button(self, text="Select Video", command=lambda: selectVideo()).grid(row=1, column=0, sticky='w', padx=10)
         Button(self, text="Play", command=lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
-        path_video_lb = Label(self, text=self.path_var.get()+" : Video Path")
+        path_video_lb = Label(self, text="Video Path : ")
         path_video_lb.grid(row=2, column=1, sticky='w')
         # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
         # ---------------------------------------------------------------
@@ -263,6 +311,8 @@ class CountVideo(tk.Frame):
                 self.count_car_type = {0: set(), 1: set(), 2: set(), 3: set(), 4: set(), 5: set(), 6: set(), 7: set(),
                                        8: set(), 9: set(), 10: set(), 11: set()}
                 self.totalCount = []
+
+                self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
 
                 # update data on Counting tabel
                 car_up_7.config(text=str(len(self.count_car_type[7])))
@@ -424,9 +474,9 @@ class CountCamera(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        self.time, self.time_rec = controller.sendTime()
-        self.path_var = StringVar(value="SourceData/mask_selection.png")
-
+        self.config = ConfigParser()
+        self.config.read("Setting/config.ini")
+        self.time, self.time_rec = self.config['Config']['all_timecount'], self.config['Config']['every_record']
         # ------------------- for Count ----------------------------------------
         self.cap = None
         # Create Object Model YOLO
@@ -448,7 +498,7 @@ class CountCamera(tk.Frame):
         self.totalCount = []
 
         # read mask image
-        imgMask = cv2.imread(self.path_var.get())
+        imgMask = cv2.imread(self.config['Config']['path_mask'])
         # ----------------------------------------------------------------------
 
         # add widget
@@ -553,7 +603,7 @@ class CountCamera(tk.Frame):
                 tk.messagebox.showwarning("Warning!", "Please Select Video")
             else:
                 interval = 10  # Time interval in seconds
-                total_time = 120  # Total time in seconds (1 minute)
+                total_time = 120  # Total time in seconds (2 minute)
                 count_time = 0
 
                 start_time = datetime.now()
@@ -567,6 +617,7 @@ class CountCamera(tk.Frame):
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
                         break  # Exit the loop if there's an issue with reading frames
+
                     # Check if 30 seconds have passed
                     elapsed_hello_time = datetime.now() - hello_time
                     if elapsed_hello_time.total_seconds() >= interval:
