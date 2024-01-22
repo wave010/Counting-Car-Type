@@ -1,16 +1,14 @@
-from configparser import ConfigParser
+import tkinter as tk
+from tkinter import *
 
-import pymongo
 
-config = ConfigParser()
-config.read("Setting/config.ini")
+root = tk.Tk()
+chev = IntVar()
+cb1 = Checkbutton(root, text="Use Video example",variable=chev, offvalue=0, onvalue=1)
+cb1.pack()
 
-client = pymongo.MongoClient(config['Config']['Database'])
-mydb = client['mydatabase']
-mycol = mydb["CountFormVideo"]
+# Create a button to check the value of chev
+check_button = Button(root, text="Check chev value", command=lambda: print(chev.get()))
+check_button.pack()
 
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
+root.mainloop()

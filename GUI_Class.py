@@ -494,7 +494,6 @@ class CountCamera(tk.Frame):
 
         # ------------------- for Count ----------------------------------------
         self.cap = None
-
         self.time_start = None
         self.time_end = None
 
@@ -529,14 +528,17 @@ class CountCamera(tk.Frame):
 
         # --- Button Select & Play Video
         Button(self, text="Play", command=lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
+        self.UseExample = IntVar()
+        Checkbutton(self, text="Use Video Example", variable=self.UseExample, offvalue=0, onvalue=1).grid(row=2, column=1, sticky='w')
+
         path_video_lb = Label(self, text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
-        path_video_lb.grid(row=2, column=1, sticky='w')
+        path_video_lb.grid(row=2, column=2, sticky='w')
         # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
         # ---------------------------------------------------------------
 
         # --- Frame Show image
         image_frame = Frame(self)
-        image_frame.grid(row=3, column=0, rowspan=14, columnspan=2)
+        image_frame.grid(row=3, column=0, rowspan=14, columnspan=3)
         # image
         f1 = LabelFrame(image_frame, bg="green")
         f1.grid(row=0, column=0)
@@ -618,7 +620,10 @@ class CountCamera(tk.Frame):
         update_label.grid(row=0, column=1, sticky='w', padx=15)
 
         def playCountCar():
-            self.cap = cv2.VideoCapture("SourceData/video2.mp4")
+            if self.UseExample.get() == 0:
+                self.cap = cv2.VideoCapture(0)
+            else:
+                self.cap = cv2.VideoCapture("SourceData/video2.mp4")
 
             if self.cap is None:
                 tk.messagebox.showwarning("Warning!", "Please Select Video")
