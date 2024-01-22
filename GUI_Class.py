@@ -144,6 +144,8 @@ class Setting(tk.Frame):
                 status_DB.config(text="Status : Error!")
 
         def saveConfig(database, Alltime, EveryTime, PathMask):
+            limit = ""
+            # setting time
             match1 = re.match(r'(\d+)\s*(\w+)', Alltime)
             value1, unit1 = match1.groups()
             value1 = int(value1)
@@ -159,11 +161,15 @@ class Setting(tk.Frame):
                 EveryTime = value2 * 3600
             elif unit2.startswith('min'):
                 EveryTime = value2 * 60
+            # setting mask
+            if PathMask.get() == "SourceData/mask_selection.png":
+                limit = "250,180,640,180"
 
             self.config.set('Config', 'database', database)
             self.config.set('Config', 'all_timecount', str(Alltime))
             self.config.set('Config', 'every_record', str(EveryTime))
             self.config.set('Config', 'path_mask', PathMask.get())
+            self.config.set('Config', 'limit', limit)
 
             # edit config file
             with open("Setting/config.ini", "w") as configfile:
@@ -198,7 +204,8 @@ class CountVideo(tk.Frame):
         tracker = Tracker()
 
         # Line Counter
-        limits = [250, 180, 640, 180]
+        list_of_integers = self.config['Config']['limit'].split(",")
+        limits = [int(x) for x in list_of_integers]
         self.totalCount = []
 
         # read mask image
@@ -512,7 +519,8 @@ class CountCamera(tk.Frame):
         tracker = Tracker()
 
         # Line Counter
-        limits = [250, 180, 640, 180]
+        list_of_integers = self.config['Config']['limit'].split(",")
+        limits = [int(x) for x in list_of_integers]
         self.totalCount = []
 
         # read mask image
