@@ -98,13 +98,13 @@ class Setting(tk.Frame):
         Mask_setting.pack(padx=10, pady=10)
 
         self.img1 = PhotoImage(file="SourceData/maskSetting.png")
-        self.img2 = PhotoImage(file="SourceData/maskSetting.png")
+        self.img2 = PhotoImage(file="SourceData/maskSetting2.png")
 
         pathMask = StringVar()
         pathMask.set("SourceData/mask_selection.png")
         r1 = Radiobutton(Mask_setting, image=self.img1, variable=pathMask, value="SourceData/mask_selection.png")
         r1.grid(row=0, column=0)
-        r2 = Radiobutton(Mask_setting, image=self.img2, variable=pathMask, value="None")
+        r2 = Radiobutton(Mask_setting, image=self.img2, variable=pathMask, value="SourceData/mask_selection2.png")
         r2.grid(row=0, column=1)
 
         # --- Only Count From Camera
@@ -164,6 +164,8 @@ class Setting(tk.Frame):
             # setting mask
             if PathMask.get() == "SourceData/mask_selection.png":
                 limit = "250,180,640,180"
+            elif PathMask.get() == "SourceData/mask_selection2.png":
+                limit = "0,220,400,220"
 
             self.config.set('Config', 'database', database)
             self.config.set('Config', 'all_timecount', str(Alltime))
