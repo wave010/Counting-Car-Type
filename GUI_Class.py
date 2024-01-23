@@ -786,5 +786,6 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = MyApp(root)
     root.geometry("1000x500")
+    root.iconphoto(False, tk.PhotoImage(file='SourceData/IconCCT.png'))
     root.resizable(False, False)
     root.mainloop()
