@@ -9,7 +9,6 @@
 *.pyt
 
 # no file video
-*.mp4
 *.csv
 
 # Virtual environment
