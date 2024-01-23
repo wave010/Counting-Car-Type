@@ -308,9 +308,12 @@ class CountVideo(tk.Frame):
         bu_frame = Frame(self)
         bu_frame.grid(row=17, column=0, sticky='w', padx=10)
 
-        Button(bu_frame, text="Back", command=lambda: controller.show_page("Home")).grid(row=0, column=0, sticky='w', padx=10)
-        Button(bu_frame, text="Download", command=lambda: ExportFile()).grid(row=0, column=1, sticky='w', padx=10)
-        Button(bu_frame, text="Save to Database", command=lambda: SaveToDatabase()).grid(row=0, column=2, sticky='w', padx=10)
+        self.back = Button(bu_frame, text="Back", command=lambda: controller.show_page("Home"))
+        self.back.grid(row=0, column=0, sticky='w', padx=10)
+        self.download = Button(bu_frame, text="Download", command=lambda: ExportFile())
+        self.download.grid(row=0, column=1, sticky='w', padx=10)
+        self.saveDB = Button(bu_frame, text="Save to Database", command=lambda: SaveToDatabase())
+        self.saveDB.grid(row=0, column=2, sticky='w', padx=10)
 
         def selectVideo():
             video_path = filedialog.askopenfilename(filetypes=[
@@ -405,6 +408,11 @@ class CountVideo(tk.Frame):
                 img_ = cv2.resize(img_, (640, 360))
                 self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                 self.image_label['image'] = self.photo_image
+                # lock button
+                self.back['state'] = tk.DISABLED
+                self.download['state'] = tk.DISABLED
+                self.saveDB['state'] = tk.DISABLED
+
                 count_frame = 1
                 self.time_start = datetime.now()
                 while True:
@@ -416,6 +424,10 @@ class CountVideo(tk.Frame):
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
                         self.time_end = datetime.now()
+                        # unlock button
+                        self.back['state'] = tk.NORMAL
+                        self.download['state'] = tk.NORMAL
+                        self.saveDB['state'] = tk.NORMAL
                         break  # Exit the loop if there's an issue with reading frames
 
                     frame = cv2.resize(frame, (640, 360))
@@ -625,7 +637,8 @@ class CountCamera(tk.Frame):
         bu_frame = Frame(self)
         bu_frame.grid(row=17, column=0, sticky='w', padx=10)
 
-        Button(bu_frame, text="Back", command=lambda: controller.show_page("Home")).grid(row=0, column=0, sticky='w', padx=10)
+        self.back = Button(bu_frame, text="Back", command=lambda: controller.show_page("Home"))
+        self.back.grid(row=0, column=0, sticky='w', padx=10)
         update_label = Label(bu_frame, text="last update database :")
         update_label.grid(row=0, column=1, sticky='w', padx=15)
 
@@ -638,6 +651,7 @@ class CountCamera(tk.Frame):
             if self.cap is None:
                 tk.messagebox.showwarning("Warning!", "Please Select Video")
             else:
+                self.back['state'] = tk.DISABLED
                 interval = self.time_rec  # Time interval in seconds
                 total_time = self.time  # Total time in seconds
                 count_time = 0
@@ -657,6 +671,7 @@ class CountCamera(tk.Frame):
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
                         self.image_label['image'] = self.photo_image
+                        self.back['state'] = tk.NORMAL
                         break  # Exit the loop if there's an issue with reading frames
 
                     # Check if Every time to Record
@@ -708,6 +723,7 @@ class CountCamera(tk.Frame):
                         self.myCollect.insert_one(my_dict_data)
 
                         self.cap = None
+                        self.back['state'] = tk.NORMAL
                         break
 
                     frame = cv2.resize(frame, (640, 360))
