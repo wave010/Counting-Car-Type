@@ -19,9 +19,6 @@ class MyApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Counting Car Type Project")
-        # ------- variable -----
-        self.allTimeCount = str()
-        self.timeRecord = str()
 
         # Create a container to hold the pages
         self.container = tk.Frame(root)
@@ -47,15 +44,6 @@ class MyApp:
         for page in self.pages.values():
             page.grid_remove()
         self.pages[page_name].grid()
-
-    def setting(self, allTime, timeRec):
-        self.allTimeCount = allTime
-        self.timeRecord = timeRec
-        print("All Time to record : ", self.allTimeCount)
-        print("Every Count: ", self.timeRecord)
-
-    def sendTime(self):
-        return self.allTimeCount, self.timeRecord
 
 
 class Home(tk.Frame):
@@ -407,7 +395,7 @@ class CountVideo(tk.Frame):
                 img_ = cv2.imread('SourceData/VideoProcessing.png')
                 img_ = cv2.resize(img_, (640, 360))
                 self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                self.image_label['image'] = self.photo_image
+                self.image_label.configure(image=self.photo_image)
                 # lock button
                 self.back['state'] = tk.DISABLED
                 self.download['state'] = tk.DISABLED
@@ -422,7 +410,7 @@ class CountVideo(tk.Frame):
                         img_ = cv2.imread('SourceData/EndCounting.png')
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                        self.image_label['image'] = self.photo_image
+                        self.image_label.configure(image=self.photo_image)
                         self.time_end = datetime.now()
                         # unlock button
                         self.back['state'] = tk.NORMAL
@@ -493,7 +481,7 @@ class CountVideo(tk.Frame):
                                 tot_count.config(text=str(len(self.totalCount)))
                     if show:
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
-                        self.image_label['image'] = self.photo_image
+                        self.image_label.configure(image=self.photo_image)
                     count_frame += 1 # count number of frame
                     root.update()
                     # Add a delay to control the frame rate
@@ -670,7 +658,7 @@ class CountCamera(tk.Frame):
                         img_ = cv2.imread('SourceData/EndCounting.png')
                         img_ = cv2.resize(img_, (640, 360))
                         self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                        self.image_label['image'] = self.photo_image
+                        self.image_label.configure(image=self.photo_image)
                         self.back['state'] = tk.NORMAL
                         break  # Exit the loop if there's an issue with reading frames
 
@@ -791,7 +779,7 @@ class CountCamera(tk.Frame):
                                 tot_count.config(text=str(len(self.totalCount)))
 
                     self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
-                    self.image_label['image'] = self.photo_image
+                    self.image_label.configure(image=self.photo_image)
                     root.update()
 
                     # Add a delay to control the frame rate
