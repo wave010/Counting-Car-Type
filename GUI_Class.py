@@ -704,12 +704,12 @@ class CountCamera(tk.Frame):
                             'start_count': self.time_start,
                             'end_count': self.time_end,
                             'total time (s)': self.time,
-                            'each time record': self.time_rec,
+                            'each time record (s)': self.time_rec,
                             'round': Round_,
                             'Log': my_dict_log
                         }
                         self.myCollect.insert_one(my_dict_data)
-
+                        update_label.config(text="Round: " + str(Round_) + " Record")
                         self.cap = None
                         self.back['state'] = tk.NORMAL
                         break
@@ -782,6 +782,7 @@ class CountCamera(tk.Frame):
                     self.image_label.configure(image=self.photo_image)
                     root.update()
 
+                    count_frame += 1  # count number of frame
                     # Add a delay to control the frame rate
                     cv2.waitKey(1)
 
