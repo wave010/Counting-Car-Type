@@ -20,6 +20,10 @@ class MyApp:
         self.root = root
         self.root.title("Counting Car Type Project")
 
+        # Crate config setting
+        self.config = ConfigParser()
+        self.config.read("Setting/config.ini")
+
         # Create a container to hold the pages
         self.container = tk.Frame(root)
         self.container.pack(side="top", fill="both", expand=True)
@@ -40,6 +44,7 @@ class MyApp:
         self.show_page("Home")
 
     def show_page(self, page_name):
+        self.config.read("Setting/config.ini")
         # Hide all pages and show the requested page
         for page in self.pages.values():
             page.grid_remove()
@@ -63,8 +68,6 @@ class Setting(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        self.config = ConfigParser()
-        self.config.read("Setting/config.ini")
 
         # add widget
         Label(self, text="Count Setting", font=('Tomato', 20, 'bold')).pack(pady=10)
@@ -78,7 +81,7 @@ class Setting(tk.Frame):
         DB_entry.grid(row=1, column=1)
         connect_DB = Button(DB_Labelframe, text="Connect", command=lambda: Connect(DB_entry.get()))
         connect_DB.grid(row=1, column=2, padx=10)
-        status_DB = Label(DB_Labelframe, text="status : ")
+        status_DB = Label(DB_Labelframe, text="Status : ")
         status_DB.grid(row=2, column=1, sticky="w")
 
         # --- Mask Setting
@@ -132,48 +135,50 @@ class Setting(tk.Frame):
                 status_DB.config(text="Status : Error!")
 
         def saveConfig(database, Alltime, EveryTime, PathMask):
-            limit = ""
-            # setting time
-            match1 = re.match(r'(\d+)\s*(\w+)', Alltime)
-            value1, unit1 = match1.groups()
-            value1 = int(value1)
-            if unit1.startswith('Hrs'):
-                Alltime = value1 * 3600
-            elif unit1.startswith('min'):
-                Alltime = value1 * 60
+            try:
+                limit = ""
+                # setting time
+                match1 = re.match(r'(\d+)\s*(\w+)', Alltime)
+                value1, unit1 = match1.groups()
+                value1 = int(value1)
+                if unit1.startswith('Hrs'):
+                    Alltime = value1 * 3600
+                elif unit1.startswith('min'):
+                    Alltime = value1 * 60
 
-            match2 = re.match(r'(\d+)\s*(\w+)', EveryTime)
-            value2, unit2 = match2.groups()
-            value2 = int(value2)
-            if unit2.startswith('Hrs'):
-                EveryTime = value2 * 3600
-            elif unit2.startswith('min'):
-                EveryTime = value2 * 60
-            # setting mask
-            if PathMask.get() == "SourceData/mask_selection.png":
-                limit = "250,180,640,180"
-            elif PathMask.get() == "SourceData/mask_selection2.png":
-                limit = "0,220,400,220"
+                match2 = re.match(r'(\d+)\s*(\w+)', EveryTime)
+                value2, unit2 = match2.groups()
+                value2 = int(value2)
+                if unit2.startswith('Hrs'):
+                    EveryTime = value2 * 3600
+                elif unit2.startswith('min'):
+                    EveryTime = value2 * 60
+                # setting mask
+                if PathMask.get() == "SourceData/mask_selection.png":
+                    limit = "250,180,640,180"
+                elif PathMask.get() == "SourceData/mask_selection2.png":
+                    limit = "0,220,400,220"
 
-            self.config.set('Config', 'database', database)
-            self.config.set('Config', 'all_timecount', str(Alltime))
-            self.config.set('Config', 'every_record', str(EveryTime))
-            self.config.set('Config', 'path_mask', PathMask.get())
-            self.config.set('Config', 'limit', limit)
+                self.controller.config.set('Config', 'database', database)
+                self.controller.config.set('Config', 'all_timecount', str(Alltime))
+                self.controller.config.set('Config', 'every_record', str(EveryTime))
+                self.controller.config.set('Config', 'path_mask', PathMask.get())
+                self.controller.config.set('Config', 'limit', limit)
 
-            # edit config file
-            with open("Setting/config.ini", "w") as configfile:
-                self.config.write(configfile)
+                # edit config file
+                with open("Setting/config.ini", "w") as configfile:
+                    self.controller.config.write(configfile)
+                tk.messagebox.showinfo('Save', 'Save Config')
 
-            tk.messagebox.showinfo('Save', 'Save Config')
+            except Exception as e:
+                tk.messagebox.showwarning("Incorrect information", "Error ! : "+ str(e))
 
 
 class CountVideo(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        self.config = ConfigParser()
-        self.config.read("Setting/config.ini")
+        self.config = self.controller.config
 
         # ------------------- for Count ----------------------------------------
         self.cap = None
@@ -304,196 +309,208 @@ class CountVideo(tk.Frame):
         self.saveDB.grid(row=0, column=2, sticky='w', padx=10)
 
         def selectVideo():
-            video_path = filedialog.askopenfilename(filetypes=[
-                ("all video format", "mp4"),
-                ("all video format", "avi")])
-            if len(video_path) > 0:
-                self.path = video_path
-                path_video_lb.config(text="Video : "+ self.path)
-                self.cap = cv2.VideoCapture(video_path)
-                img_ = cv2.imread('SourceData/PlayVideo.png')
-                img_ = cv2.resize(img_, (640, 360))
-                self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                self.image_label['image'] = self.photo_image
+            try:
+                video_path = filedialog.askopenfilename(filetypes=[
+                    ("all video format", "mp4"),
+                    ("all video format", "avi")])
+                if len(video_path) > 0:
+                    self.path = video_path
+                    path_video_lb.config(text="Video : "+ self.path)
+                    self.cap = cv2.VideoCapture(video_path)
+                    img_ = cv2.imread('SourceData/PlayVideo.png')
+                    img_ = cv2.resize(img_, (640, 360))
+                    self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                    self.image_label['image'] = self.photo_image
 
-                # Reset Data
-                self.count_car_type = {0: set(), 1: set(), 2: set(), 3: set(), 4: set(), 5: set(), 6: set(), 7: set(),
-                                       8: set(), 9: set(), 10: set(), 11: set()}
-                self.totalCount = []
+                    # Reset Data
+                    self.count_car_type = {0: set(), 1: set(), 2: set(), 3: set(), 4: set(), 5: set(), 6: set(), 7: set(),
+                                           8: set(), 9: set(), 10: set(), 11: set()}
+                    self.totalCount = []
 
-                self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
+                    self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
 
-                # update data on Counting tabel
-                car_up_7.config(text=str(len(self.count_car_type[7])))
-                car_more_7.config(text=str(len(self.count_car_type[6])))
-                small_truck.config(text=str(len(self.count_car_type[9])))
-                axle_2_truck.config(text=str(len(self.count_car_type[0])))
-                axle_3_truck.config(text=str(len(self.count_car_type[1])))
-                trailer_truck.config(text=str(len(self.count_car_type[10])))
-                semi_trailer_truck.config(text=str(len(self.count_car_type[8])))
-                bus_mini.config(text=str(len(self.count_car_type[5])))
-                bus_me.config(text=str(len(self.count_car_type[4])))
-                bus_lar.config(text=str(len(self.count_car_type[3])))
-                bicycle.config(text=str(len(self.count_car_type[2])))
-                motorbike.config(text=str(len(self.count_car_type[11])))
-                tot_count.config(text=str(len(self.totalCount)))
-            else:
-                path_video_lb.config(text="Select your Video")
+                    # update data on Counting tabel
+                    car_up_7.config(text=str(len(self.count_car_type[7])))
+                    car_more_7.config(text=str(len(self.count_car_type[6])))
+                    small_truck.config(text=str(len(self.count_car_type[9])))
+                    axle_2_truck.config(text=str(len(self.count_car_type[0])))
+                    axle_3_truck.config(text=str(len(self.count_car_type[1])))
+                    trailer_truck.config(text=str(len(self.count_car_type[10])))
+                    semi_trailer_truck.config(text=str(len(self.count_car_type[8])))
+                    bus_mini.config(text=str(len(self.count_car_type[5])))
+                    bus_me.config(text=str(len(self.count_car_type[4])))
+                    bus_lar.config(text=str(len(self.count_car_type[3])))
+                    bicycle.config(text=str(len(self.count_car_type[2])))
+                    motorbike.config(text=str(len(self.count_car_type[11])))
+                    tot_count.config(text=str(len(self.totalCount)))
+                else:
+                    path_video_lb.config(text="Select your Video")
+            except Exception as e:
+                tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
 
         def ExportFile():
-            if self.cap is None:
-                tk.messagebox.showwarning("Warning!", "Please Select Video")
-            elif len(self.log_df) == 0:
-                tk.messagebox.showwarning("Warning!", "Play Video")
-            else:
-                file = filedialog.asksaveasfilename(
-                    filetypes=[("excel file", ".xlsx")],
-                    defaultextension=".xlsx")
-                if file:
-                    df_info = pd.DataFrame(
-                        [[str(self.path), self.cap.get(cv2.CAP_PROP_FPS), int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)), (int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))/self.cap.get(cv2.CAP_PROP_FPS)), self.time_start, self.time_end]],
-                        columns=['path', 'fps', 'total frame', 'duration (sec)', 'start_count', 'end_count'])
-                    df_con = self.log_df.groupby(['type_name']).size().reset_index(name='counts')
+            try:
+                if self.cap is None:
+                    tk.messagebox.showwarning("Warning!", "Please Select Video")
+                elif len(self.log_df) == 0:
+                    tk.messagebox.showwarning("Warning!", "Play Video")
+                else:
+                    file = filedialog.asksaveasfilename(
+                        filetypes=[("excel file", ".xlsx")],
+                        defaultextension=".xlsx")
+                    if file:
+                        df_info = pd.DataFrame(
+                            [[str(self.path), self.cap.get(cv2.CAP_PROP_FPS), int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)), (int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))/self.cap.get(cv2.CAP_PROP_FPS)), self.time_start, self.time_end]],
+                            columns=['path', 'fps', 'total frame', 'duration (sec)', 'start_count', 'end_count'])
+                        df_con = self.log_df.groupby(['type_name']).size().reset_index(name='counts')
 
-                    with pd.ExcelWriter(file, engine='xlsxwriter') as writer:
-                        df_info.to_excel(writer, sheet_name='video info', index=False)
-                        self.log_df.to_excel(writer, sheet_name='Counting log', index=False)
-                        df_con.to_excel(writer, sheet_name='Summary of car types', index=False)
+                        with pd.ExcelWriter(file, engine='xlsxwriter') as writer:
+                            df_info.to_excel(writer, sheet_name='video info', index=False)
+                            self.log_df.to_excel(writer, sheet_name='Counting log', index=False)
+                            df_con.to_excel(writer, sheet_name='Summary of car types', index=False)
+            except Exception as e:
+                tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
 
         def SaveToDatabase():
-            if self.cap is None:
-                tk.messagebox.showwarning("Warning!", "Please Select Video")
-            elif len(self.log_df) == 0:
-                tk.messagebox.showwarning("Warning!", "Play Video")
-            else:
-                # Create a new client and connect to the server
-                uri = self.config['Config']['Database']
-                client = pymongo.MongoClient(uri)
-                mydb = client['mydatabase']
-                mycol = mydb["CountFormVideo"]
-                try:
-                    my_dict_log = self.log_df.to_dict(orient='records')
-                    my_dict_data = {
-                        "Path": str(self.path),
-                        'fps': self.cap.get(cv2.CAP_PROP_FPS),
-                        'total frame': self.cap.get(cv2.CAP_PROP_FRAME_COUNT),
-                        'duration (s)': (int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)) / self.cap.get(cv2.CAP_PROP_FPS)),
-                        'start_count': self.time_start,
-                        'end_count': self.time_end,
-                        'Log': my_dict_log
-                    }
-                    mycol.insert_one(my_dict_data)
-                    tk.messagebox.showinfo("DataBase MongoDB", "Successfully inserted into the database")
-                except Exception as e:
-                    tk.messagebox.showwarning("Warning!", f"An error occurred: {type(e).__name__} - {e}")
+            try:
+                if self.cap is None:
+                    tk.messagebox.showwarning("Warning!", "Please Select Video")
+                elif len(self.log_df) == 0:
+                    tk.messagebox.showwarning("Warning!", "Play Video")
+                else:
+                    # Create a new client and connect to the server
+                    uri = self.config['Config']['Database']
+                    client = pymongo.MongoClient(uri)
+                    mydb = client['mydatabase']
+                    mycol = mydb["CountFormVideo"]
+                    try:
+                        my_dict_log = self.log_df.to_dict(orient='records')
+                        my_dict_data = {
+                            "Path": str(self.path),
+                            'fps': self.cap.get(cv2.CAP_PROP_FPS),
+                            'total frame': self.cap.get(cv2.CAP_PROP_FRAME_COUNT),
+                            'duration (s)': (int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT)) / self.cap.get(cv2.CAP_PROP_FPS)),
+                            'start_count': self.time_start,
+                            'end_count': self.time_end,
+                            'Log': my_dict_log
+                        }
+                        mycol.insert_one(my_dict_data)
+                        tk.messagebox.showinfo("DataBase MongoDB", "Successfully inserted into the database")
+                    except Exception as e:
+                        tk.messagebox.showwarning("Warning!", f"An error occurred: {type(e).__name__} - {e}")
+            except Exception as e:
+                tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
 
         def playCountCar():
-            if self.cap is None:
-                tk.messagebox.showwarning("Warning!", "Please Select Video")
-            else:
-                show = tk.messagebox.askyesno("Show Frame", "Do you want to show video?")
-                img_ = cv2.imread('SourceData/VideoProcessing.png')
-                img_ = cv2.resize(img_, (640, 360))
-                self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                self.image_label.configure(image=self.photo_image)
-                # lock button
-                self.back['state'] = tk.DISABLED
-                self.download['state'] = tk.DISABLED
-                self.saveDB['state'] = tk.DISABLED
+            try:
+                if self.cap is None:
+                    tk.messagebox.showwarning("Warning!", "Please Select Video")
+                else:
+                    show = tk.messagebox.askyesno("Show Frame", "Do you want to show video?")
+                    img_ = cv2.imread('SourceData/VideoProcessing.png')
+                    img_ = cv2.resize(img_, (640, 360))
+                    self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                    self.image_label.configure(image=self.photo_image)
+                    # lock button
+                    self.back['state'] = tk.DISABLED
+                    self.download['state'] = tk.DISABLED
+                    self.saveDB['state'] = tk.DISABLED
 
-                count_frame = 1
-                self.time_start = datetime.now()
-                while True:
-                    ret, frame = self.cap.read()
-                    # Check if the frame is empty or invalid
-                    if not ret or frame is None:
-                        img_ = cv2.imread('SourceData/EndCounting.png')
-                        img_ = cv2.resize(img_, (640, 360))
-                        self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                        self.image_label.configure(image=self.photo_image)
-                        self.time_end = datetime.now()
-                        # unlock button
-                        self.back['state'] = tk.NORMAL
-                        self.download['state'] = tk.NORMAL
-                        self.saveDB['state'] = tk.NORMAL
-                        break  # Exit the loop if there's an issue with reading frames
+                    count_frame = 1
+                    self.time_start = datetime.now()
+                    while True:
+                        ret, frame = self.cap.read()
+                        # Check if the frame is empty or invalid
+                        if not ret or frame is None:
+                            img_ = cv2.imread('SourceData/EndCounting.png')
+                            img_ = cv2.resize(img_, (640, 360))
+                            self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                            self.image_label.configure(image=self.photo_image)
+                            self.time_end = datetime.now()
+                            # unlock button
+                            self.back['state'] = tk.NORMAL
+                            self.download['state'] = tk.NORMAL
+                            self.saveDB['state'] = tk.NORMAL
+                            break  # Exit the loop if there's an issue with reading frames
 
-                    frame = cv2.resize(frame, (640, 360))
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    imgRegion = cv2.bitwise_and(frame, imgMask)
+                        frame = cv2.resize(frame, (640, 360))
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        imgRegion = cv2.bitwise_and(frame, imgMask)
 
-                    # Detect Object Car Type
-                    result = model(imgRegion)
-                    a = result[0].boxes.data
-                    px = pd.DataFrame(a).astype("float")
+                        # Detect Object Car Type
+                        result = model(imgRegion)
+                        a = result[0].boxes.data
+                        px = pd.DataFrame(a).astype("float")
 
-                    # list object predict
-                    list_obj = []
-                    for index, row in px.iterrows():
-                        x1 = int(row[0])
-                        y1 = int(row[1])
-                        x2 = int(row[2])
-                        y2 = int(row[3])
-                        conf = row[4]
-                        d = int(row[5])
-                        list_obj.append([x1, y1, x2, y2, d, conf])
-                    # Tracker ID for Car Type
-                    bbox_id = tracker.update(list_obj)
+                        # list object predict
+                        list_obj = []
+                        for index, row in px.iterrows():
+                            x1 = int(row[0])
+                            y1 = int(row[1])
+                            x2 = int(row[2])
+                            y2 = int(row[3])
+                            conf = row[4]
+                            d = int(row[5])
+                            list_obj.append([x1, y1, x2, y2, d, conf])
+                        # Tracker ID for Car Type
+                        bbox_id = tracker.update(list_obj)
 
-                    # Create line counter
-                    cv2.line(frame, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 2)
-                    for bbox in bbox_id:
-                        x3, y3, x4, y4, id, cls, conf = bbox
-                        cx = int(x3 + x4) // 2
-                        cy = int(y3 + y4) // 2
-                        w, h = x4 - x3, y4 - y3
+                        # Create line counter
+                        cv2.line(frame, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 2)
+                        for bbox in bbox_id:
+                            x3, y3, x4, y4, id, cls, conf = bbox
+                            cx = int(x3 + x4) // 2
+                            cy = int(y3 + y4) // 2
+                            w, h = x4 - x3, y4 - y3
 
-                        # Bounding Box to obj
-                        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
-                        cv2.rectangle(frame, (x3, y3), (x4, y4), (255, 0, 255), 3)
-                        cv2.putText(frame, str(id), (cx, cy), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 1)
+                            # Bounding Box to obj
+                            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+                            cv2.rectangle(frame, (x3, y3), (x4, y4), (255, 0, 255), 3)
+                            cv2.putText(frame, str(id), (cx, cy), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 1)
 
-                        cvzone.cornerRect(frame, (x3, y3, w, h), l=9)
-                        cvzone.putTextRect(frame, f'{conf:0.2f} {class_list[cls]}', (max(0, x3), max(35, y3)), 1, 1, 3)
+                            cvzone.cornerRect(frame, (x3, y3, w, h), l=9)
+                            cvzone.putTextRect(frame, f'{conf:0.2f} {class_list[cls]}', (max(0, x3), max(35, y3)), 1, 1, 3)
 
-                        # Counting Car
-                        if limits[0] < cx < limits[2] and limits[1] - 20 < cy < limits[1] + 20:
-                            if self.totalCount.count(id) == 0:
-                                self.totalCount.append(id)
-                                self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
+                            # Counting Car
+                            if limits[0] < cx < limits[2] and limits[1] - 20 < cy < limits[1] + 20:
+                                if self.totalCount.count(id) == 0:
+                                    self.totalCount.append(id)
+                                    self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
 
-                                add_log = pd.DataFrame([[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]], columns=cols)
-                                self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
+                                    add_log = pd.DataFrame([[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]], columns=cols)
+                                    self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
 
-                                # update data on Counting tabel
-                                car_up_7.config(text=str(len(self.count_car_type[7])))
-                                car_more_7.config(text=str(len(self.count_car_type[6])))
-                                small_truck.config(text=str(len(self.count_car_type[9])))
-                                axle_2_truck.config(text=str(len(self.count_car_type[0])))
-                                axle_3_truck.config(text=str(len(self.count_car_type[1])))
-                                trailer_truck.config(text=str(len(self.count_car_type[10])))
-                                semi_trailer_truck.config(text=str(len(self.count_car_type[8])))
-                                bus_mini.config(text=str(len(self.count_car_type[5])))
-                                bus_me.config(text=str(len(self.count_car_type[4])))
-                                bus_lar.config(text=str(len(self.count_car_type[3])))
-                                bicycle.config(text=str(len(self.count_car_type[2])))
-                                motorbike.config(text=str(len(self.count_car_type[11])))
-                                tot_count.config(text=str(len(self.totalCount)))
-                    if show:
-                        self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
-                        self.image_label.configure(image=self.photo_image)
-                    count_frame += 1 # count number of frame
-                    root.update()
-                    # Add a delay to control the frame rate
-                    cv2.waitKey(1)
+                                    # update data on Counting tabel
+                                    car_up_7.config(text=str(len(self.count_car_type[7])))
+                                    car_more_7.config(text=str(len(self.count_car_type[6])))
+                                    small_truck.config(text=str(len(self.count_car_type[9])))
+                                    axle_2_truck.config(text=str(len(self.count_car_type[0])))
+                                    axle_3_truck.config(text=str(len(self.count_car_type[1])))
+                                    trailer_truck.config(text=str(len(self.count_car_type[10])))
+                                    semi_trailer_truck.config(text=str(len(self.count_car_type[8])))
+                                    bus_mini.config(text=str(len(self.count_car_type[5])))
+                                    bus_me.config(text=str(len(self.count_car_type[4])))
+                                    bus_lar.config(text=str(len(self.count_car_type[3])))
+                                    bicycle.config(text=str(len(self.count_car_type[2])))
+                                    motorbike.config(text=str(len(self.count_car_type[11])))
+                                    tot_count.config(text=str(len(self.totalCount)))
+                        if show:
+                            self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
+                            self.image_label.configure(image=self.photo_image)
+                        count_frame += 1 # count number of frame
+                        root.update()
+                        # Add a delay to control the frame rate
+                        cv2.waitKey(1)
+            except Exception as e:
+                tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
 
 
 class CountCamera(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
-        self.config = ConfigParser()
-        self.config.read("Setting/config.ini")
+        self.config = self.controller.config
+
         self.time, self.time_rec = int(self.config['Config']['all_timecount']), int(self.config['Config']['every_record'])
         # database
         uri = self.config['Config']['Database']
@@ -631,160 +648,163 @@ class CountCamera(tk.Frame):
         update_label.grid(row=0, column=1, sticky='w', padx=15)
 
         def playCountCar():
-            if self.UseExample.get() == 0:
-                self.cap = cv2.VideoCapture(0)
-            else:
-                self.cap = cv2.VideoCapture("SourceData/video2.mp4")
+            try:
+                if self.UseExample.get() == 0:
+                    self.cap = cv2.VideoCapture(0)
+                else:
+                    self.cap = cv2.VideoCapture("SourceData/video2.mp4")
 
-            if self.cap is None:
-                tk.messagebox.showwarning("Warning!", "Please Select Video")
-            else:
-                self.back['state'] = tk.DISABLED
-                interval = self.time_rec  # Time interval in seconds
-                total_time = self.time  # Total time in seconds
-                count_time = 0
+                if self.cap is None:
+                    tk.messagebox.showwarning("Warning!", "Please Select Video")
+                else:
+                    self.back['state'] = tk.DISABLED
+                    interval = self.time_rec  # Time interval in seconds
+                    total_time = self.time  # Total time in seconds
+                    count_time = 0
 
-                start_time = datetime.now()
-                hello_time = datetime.now()
+                    start_time = datetime.now()
+                    hello_time = datetime.now()
 
-                self.time_start = datetime.now()
-                count_frame = 1
-                Round_ = 1
+                    self.time_start = datetime.now()
+                    count_frame = 1
+                    Round_ = 1
 
-                while True:
-                    ret, frame = self.cap.read()
-                    # Check if the frame is empty or invalid
-                    if not ret or frame is None:
-                        img_ = cv2.imread('SourceData/EndCounting.png')
-                        img_ = cv2.resize(img_, (640, 360))
-                        self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                    while True:
+                        ret, frame = self.cap.read()
+                        # Check if the frame is empty or invalid
+                        if not ret or frame is None:
+                            img_ = cv2.imread('SourceData/EndCounting.png')
+                            img_ = cv2.resize(img_, (640, 360))
+                            self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                            self.image_label.configure(image=self.photo_image)
+                            self.back['state'] = tk.NORMAL
+                            break  # Exit the loop if there's an issue with reading frames
+
+                        # Check if Every time to Record
+                        elapsed_hello_time = datetime.now() - hello_time
+                        if elapsed_hello_time.total_seconds() >= interval:
+                            count_time += 1
+
+                            # add to database
+                            self.time_end = datetime.now()
+                            my_dict_log = self.log_df.to_dict(orient='records')
+                            my_dict_data = {
+                                'fps': self.cap.get(cv2.CAP_PROP_FPS),
+                                'start_count': self.time_start,
+                                'end_count': self.time_end,
+                                'total time (s)': self.time,
+                                'each time record (s)': self.time_rec,
+                                'round': Round_,
+                                'Log': my_dict_log
+                            }
+                            self.myCollect.insert_one(my_dict_data)
+
+                            update_label.config(text="Round: "+ str(Round_)+ " Record")
+                            Round_+=1 # update round
+                            hello_time = datetime.now()
+
+                            # reset
+                            self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
+
+                        # Check if End to Record
+                        elapsed_time = datetime.now() - start_time
+                        if elapsed_time.total_seconds() >= total_time:
+                            img_ = cv2.imread('SourceData/EndCounting.png')
+                            img_ = cv2.resize(img_, (640, 360))
+                            self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
+                            self.image_label['image'] = self.photo_image
+
+                            # add to database
+                            self.time_end = datetime.now()
+                            my_dict_log = self.log_df.to_dict(orient='records')
+                            my_dict_data = {
+                                'fps': self.cap.get(cv2.CAP_PROP_FPS),
+                                'start_count': self.time_start,
+                                'end_count': self.time_end,
+                                'total time (s)': self.time,
+                                'each time record (s)': self.time_rec,
+                                'round': Round_,
+                                'Log': my_dict_log
+                            }
+                            self.myCollect.insert_one(my_dict_data)
+                            update_label.config(text="Round: " + str(Round_) + " Record")
+                            self.cap = None
+                            self.back['state'] = tk.NORMAL
+                            break
+
+                        frame = cv2.resize(frame, (640, 360))
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        imgRegion = cv2.bitwise_and(frame, imgMask)
+
+                        # Detect Object Car Type
+                        result = model(imgRegion)
+                        a = result[0].boxes.data
+                        px = pd.DataFrame(a).astype("float")
+
+                        # list object predict
+                        list_obj = []
+                        for index, row in px.iterrows():
+                            x1 = int(row[0])
+                            y1 = int(row[1])
+                            x2 = int(row[2])
+                            y2 = int(row[3])
+                            conf = row[4]
+                            d = int(row[5])
+                            list_obj.append([x1, y1, x2, y2, d, conf])
+                        # Tracker ID for Car Type
+                        bbox_id = tracker.update(list_obj)
+
+                        # Create line counter
+                        cv2.line(frame, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 2)
+                        for bbox in bbox_id:
+                            x3, y3, x4, y4, id, cls, conf = bbox
+                            cx = int(x3 + x4) // 2
+                            cy = int(y3 + y4) // 2
+                            w, h = x4 - x3, y4 - y3
+
+                            # Bounding Box to obj
+                            cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
+                            cv2.rectangle(frame, (x3, y3), (x4, y4), (255, 0, 255), 3)
+                            cv2.putText(frame, str(id), (cx, cy), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 1)
+
+                            cvzone.cornerRect(frame, (x3, y3, w, h), l=9)
+                            cvzone.putTextRect(frame, f'{conf:0.2f} {class_list[cls]}', (max(0, x3), max(35, y3)), 1, 1, 3)
+
+                            # Counting Car
+                            if limits[0] < cx < limits[2] and limits[1] - 20 < cy < limits[1] + 20:
+                                if self.totalCount.count(id) == 0:
+                                    self.totalCount.append(id)
+                                    self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
+
+                                    add_log = pd.DataFrame(
+                                        [[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]],
+                                        columns=cols)
+                                    self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
+
+                                    # update data on Counting tabel
+                                    car_up_7.config(text=str(len(self.count_car_type[7])))
+                                    car_more_7.config(text=str(len(self.count_car_type[6])))
+                                    small_truck.config(text=str(len(self.count_car_type[9])))
+                                    axle_2_truck.config(text=str(len(self.count_car_type[0])))
+                                    axle_3_truck.config(text=str(len(self.count_car_type[1])))
+                                    trailer_truck.config(text=str(len(self.count_car_type[10])))
+                                    semi_trailer_truck.config(text=str(len(self.count_car_type[8])))
+                                    bus_mini.config(text=str(len(self.count_car_type[5])))
+                                    bus_me.config(text=str(len(self.count_car_type[4])))
+                                    bus_lar.config(text=str(len(self.count_car_type[3])))
+                                    bicycle.config(text=str(len(self.count_car_type[2])))
+                                    motorbike.config(text=str(len(self.count_car_type[11])))
+                                    tot_count.config(text=str(len(self.totalCount)))
+
+                        self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
                         self.image_label.configure(image=self.photo_image)
-                        self.back['state'] = tk.NORMAL
-                        break  # Exit the loop if there's an issue with reading frames
+                        root.update()
 
-                    # Check if Every time to Record
-                    elapsed_hello_time = datetime.now() - hello_time
-                    if elapsed_hello_time.total_seconds() >= interval:
-                        count_time += 1
-
-                        # add to database
-                        self.time_end = datetime.now()
-                        my_dict_log = self.log_df.to_dict(orient='records')
-                        my_dict_data = {
-                            'fps': self.cap.get(cv2.CAP_PROP_FPS),
-                            'start_count': self.time_start,
-                            'end_count': self.time_end,
-                            'total time (s)': self.time,
-                            'each time record (s)': self.time_rec,
-                            'round': Round_,
-                            'Log': my_dict_log
-                        }
-                        self.myCollect.insert_one(my_dict_data)
-
-                        update_label.config(text="Round: "+ str(Round_)+ " Record")
-                        Round_+=1 # update round
-                        hello_time = datetime.now()
-
-                        # reset
-                        self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
-
-                    # Check if End to Record
-                    elapsed_time = datetime.now() - start_time
-                    if elapsed_time.total_seconds() >= total_time:
-                        img_ = cv2.imread('SourceData/EndCounting.png')
-                        img_ = cv2.resize(img_, (640, 360))
-                        self.photo_image = ImageTk.PhotoImage(Image.fromarray(img_))
-                        self.image_label['image'] = self.photo_image
-
-                        # add to database
-                        self.time_end = datetime.now()
-                        my_dict_log = self.log_df.to_dict(orient='records')
-                        my_dict_data = {
-                            'fps': self.cap.get(cv2.CAP_PROP_FPS),
-                            'start_count': self.time_start,
-                            'end_count': self.time_end,
-                            'total time (s)': self.time,
-                            'each time record (s)': self.time_rec,
-                            'round': Round_,
-                            'Log': my_dict_log
-                        }
-                        self.myCollect.insert_one(my_dict_data)
-                        update_label.config(text="Round: " + str(Round_) + " Record")
-                        self.cap = None
-                        self.back['state'] = tk.NORMAL
-                        break
-
-                    frame = cv2.resize(frame, (640, 360))
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    imgRegion = cv2.bitwise_and(frame, imgMask)
-
-                    # Detect Object Car Type
-                    result = model(imgRegion)
-                    a = result[0].boxes.data
-                    px = pd.DataFrame(a).astype("float")
-
-                    # list object predict
-                    list_obj = []
-                    for index, row in px.iterrows():
-                        x1 = int(row[0])
-                        y1 = int(row[1])
-                        x2 = int(row[2])
-                        y2 = int(row[3])
-                        conf = row[4]
-                        d = int(row[5])
-                        list_obj.append([x1, y1, x2, y2, d, conf])
-                    # Tracker ID for Car Type
-                    bbox_id = tracker.update(list_obj)
-
-                    # Create line counter
-                    cv2.line(frame, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 2)
-                    for bbox in bbox_id:
-                        x3, y3, x4, y4, id, cls, conf = bbox
-                        cx = int(x3 + x4) // 2
-                        cy = int(y3 + y4) // 2
-                        w, h = x4 - x3, y4 - y3
-
-                        # Bounding Box to obj
-                        cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
-                        cv2.rectangle(frame, (x3, y3), (x4, y4), (255, 0, 255), 3)
-                        cv2.putText(frame, str(id), (cx, cy), cv2.FONT_HERSHEY_COMPLEX, 0.8, (0, 255, 255), 1)
-
-                        cvzone.cornerRect(frame, (x3, y3, w, h), l=9)
-                        cvzone.putTextRect(frame, f'{conf:0.2f} {class_list[cls]}', (max(0, x3), max(35, y3)), 1, 1, 3)
-
-                        # Counting Car
-                        if limits[0] < cx < limits[2] and limits[1] - 20 < cy < limits[1] + 20:
-                            if self.totalCount.count(id) == 0:
-                                self.totalCount.append(id)
-                                self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
-
-                                add_log = pd.DataFrame(
-                                    [[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]],
-                                    columns=cols)
-                                self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
-
-                                # update data on Counting tabel
-                                car_up_7.config(text=str(len(self.count_car_type[7])))
-                                car_more_7.config(text=str(len(self.count_car_type[6])))
-                                small_truck.config(text=str(len(self.count_car_type[9])))
-                                axle_2_truck.config(text=str(len(self.count_car_type[0])))
-                                axle_3_truck.config(text=str(len(self.count_car_type[1])))
-                                trailer_truck.config(text=str(len(self.count_car_type[10])))
-                                semi_trailer_truck.config(text=str(len(self.count_car_type[8])))
-                                bus_mini.config(text=str(len(self.count_car_type[5])))
-                                bus_me.config(text=str(len(self.count_car_type[4])))
-                                bus_lar.config(text=str(len(self.count_car_type[3])))
-                                bicycle.config(text=str(len(self.count_car_type[2])))
-                                motorbike.config(text=str(len(self.count_car_type[11])))
-                                tot_count.config(text=str(len(self.totalCount)))
-
-                    self.photo_image = ImageTk.PhotoImage(Image.fromarray(frame))
-                    self.image_label.configure(image=self.photo_image)
-                    root.update()
-
-                    count_frame += 1  # count number of frame
-                    # Add a delay to control the frame rate
-                    cv2.waitKey(1)
+                        count_frame += 1  # count number of frame
+                        # Add a delay to control the frame rate
+                        cv2.waitKey(1)
+            except Exception as e:
+                tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
 
 
 if __name__ == "__main__":
