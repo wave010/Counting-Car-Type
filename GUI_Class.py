@@ -24,6 +24,9 @@ class MyApp:
         self.config = ConfigParser()
         self.config.read("Setting/config.ini")
 
+        # Model
+        self.model = YOLO('YOLOModel/CarType_model.pt')
+
         # Create a container to hold the pages
         self.container = tk.Frame(root)
         self.container.pack(side="top", fill="both", expand=True)
@@ -185,8 +188,9 @@ class CountVideo(tk.Frame):
         self.path = None
         self.time_start = None
         self.time_end = None
+
         # Create Object Model YOLO
-        model = YOLO('YOLOModel/CarType_model.pt')
+        model = self.controller.model
 
         # List item Label name model
         class_list = {0: '2-Axle Truck', 1: '3-Axle Truck ', 2: 'Bicycle', 3: 'Large Bus', 4: 'Medium Bus',
@@ -477,7 +481,7 @@ class CountVideo(tk.Frame):
                                     self.totalCount.append(id)
                                     self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
 
-                                    add_log = pd.DataFrame([[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]], columns=cols)
+                                    add_log = pd.DataFrame([[count_frame, cls, class_list[cls], conf, x3, y3, w, h, cx, cy]], columns=cols)
                                     self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
 
                                     # update data on Counting tabel
@@ -524,7 +528,7 @@ class CountCamera(tk.Frame):
         self.time_end = None
 
         # Create Object Model YOLO
-        model = YOLO('YOLOModel/CarType_model.pt')
+        model = self.controller.model
 
         # List item Label name model
         class_list = {0: '2-Axle Truck', 1: '3-Axle Truck ', 2: 'Bicycle', 3: 'Large Bus', 4: 'Medium Bus',
@@ -777,7 +781,7 @@ class CountCamera(tk.Frame):
                                     self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
 
                                     add_log = pd.DataFrame(
-                                        [[count_frame, cls, class_list[cls], conf, x3, x4, w, h, cx, cy]],
+                                        [[count_frame, cls, class_list[cls], conf, x3, y3, w, h, cx, cy]],
                                         columns=cols)
                                     self.log_df = pd.concat([self.log_df, add_log], ignore_index=True)
 
