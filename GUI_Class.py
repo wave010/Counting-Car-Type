@@ -709,6 +709,7 @@ class CountCamera(tk.Frame):
 
                             # reset
                             self.log_df = pd.DataFrame(columns=['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy'])
+                            self.time_start = self.time_end
 
                         # Check if End to Record
                         elapsed_time = datetime.now() - start_time
