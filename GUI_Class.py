@@ -569,7 +569,6 @@ class CountCamera(tk.Frame):
 
         path_video_lb = Label(Button_frame, text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
         path_video_lb.grid(row=1, column=3, sticky='w')
-        # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
         # ---------------------------------------------------------------
 
         # --- Frame Show image
@@ -653,7 +652,7 @@ class CountCamera(tk.Frame):
 
         self.back = Button(bu_frame, text="Back", command=lambda: controller.show_page("Home"))
         self.back.grid(row=0, column=0, sticky='w', padx=10)
-        update_label = Label(bu_frame, text="last update database :")
+        update_label = Label(bu_frame, text="click Reset Config and Play for Start Count")
         update_label.grid(row=0, column=1, sticky='w', padx=15)
 
         def resetConfig():
@@ -698,7 +697,7 @@ class CountCamera(tk.Frame):
                     self.time_start = datetime.now()
                     count_frame = 1
                     Round_ = 1
-
+                    update_label.config(text="Counting in progress")
                     while True:
                         ret, frame = self.cap.read()
                         # Check if the frame is empty or invalid
@@ -757,8 +756,11 @@ class CountCamera(tk.Frame):
                                 'round': Round_,
                                 'Log': my_dict_log
                             }
-                            self.myCollect.insert_one(my_dict_data)
-                            update_label.config(text="Round: " + str(Round_) + " Record")
+                            if len(my_dict_log) == 0:
+                                update_label.config(text="Record, End Count")
+                            else:
+                                self.myCollect.insert_one(my_dict_data)
+                                update_label.config(text="Round: " + str(Round_) + " Record, End Count")
                             self.cap = None
                             self.back['state'] = tk.NORMAL
                             break
@@ -836,8 +838,6 @@ class CountCamera(tk.Frame):
                         cv2.waitKey(1)
             except Exception as e:
                 tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
-
-
 
 
 if __name__ == "__main__":
