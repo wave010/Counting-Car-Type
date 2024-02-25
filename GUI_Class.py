@@ -542,12 +542,12 @@ class CountCamera(tk.Frame):
         tracker = Tracker()
 
         # Line Counter
-        list_of_integers = self.config['Config']['limit'].split(",")
-        limits = [int(x) for x in list_of_integers]
+        self.list_of_integers = self.config['Config']['limit'].split(",")
+        self.limits = [int(x) for x in self.list_of_integers]
         self.totalCount = []
 
         # read mask image
-        imgMask = cv2.imread(self.config['Config']['path_mask'])
+        self.imgMask = cv2.imread(self.config['Config']['path_mask'])
 
         # create log DataFrame
         cols = ['frame', 'type_id', 'type_name', 'conf', 'x', 'y', 'w', 'h', 'cx', 'cy']
@@ -558,12 +558,17 @@ class CountCamera(tk.Frame):
         Label(self, text="Counting Car type From Camera", font=('Tomato', 10, 'bold')).grid(row=0, column=0, sticky='N', pady=5, columnspan=2)
 
         # --- Button Select & Play Video
-        Button(self, text="Play", command=lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
-        self.UseExample = IntVar()
-        Checkbutton(self, text="Use Video Example", variable=self.UseExample, offvalue=0, onvalue=1).grid(row=2, column=1, sticky='w')
+        Button_frame = Frame(self)
+        Button_frame.grid(row=2, column=0, pady=5)
 
-        path_video_lb = Label(self, text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
-        path_video_lb.grid(row=2, column=2, sticky='w')
+        Button(Button_frame, text="Play", command=lambda: playCountCar()).grid(row=1, column=0, sticky='w', padx=10)
+        Button(Button_frame, text="Reset Config", command=lambda: resetConfig()).grid(row=1, column=1, sticky='w', padx=10)
+
+        self.UseExample = IntVar()
+        Checkbutton(Button_frame, text="Use Video Example", variable=self.UseExample, offvalue=0, onvalue=1).grid(row=1, column=2, sticky='w')
+
+        path_video_lb = Label(Button_frame, text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
+        path_video_lb.grid(row=1, column=3, sticky='w')
         # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
         # ---------------------------------------------------------------
 
@@ -650,6 +655,27 @@ class CountCamera(tk.Frame):
         self.back.grid(row=0, column=0, sticky='w', padx=10)
         update_label = Label(bu_frame, text="last update database :")
         update_label.grid(row=0, column=1, sticky='w', padx=15)
+
+        def resetConfig():
+            try:
+                self.config.read("Setting/config.ini")
+                #time
+                self.time, self.time_rec = int(self.config['Config']['all_timecount']), int(self.config['Config']['every_record'])
+                # database
+                self.client = pymongo.MongoClient(self.config['Config']['Database'])
+                self.myDatabase = self.client['mydatabase']
+                self.myCollect = self.myDatabase["CountFormCamera"]
+                # Line Counter
+                self.list_of_integers = self.config['Config']['limit'].split(",")
+                self.limits = [int(x) for x in self.list_of_integers]
+                self.totalCount = []
+                # read mask image
+                self.imgMask = cv2.imread(self.config['Config']['path_mask'])
+                # config Label
+                path_video_lb.config(text="Time all :"+str(self.time)+" Time record: "+str(self.time_rec))
+                tk.messagebox.showinfo('Config Reset', 'Config is reset')
+            except Exception as e:
+                tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
 
         def playCountCar():
             try:
@@ -739,7 +765,7 @@ class CountCamera(tk.Frame):
 
                         frame = cv2.resize(frame, (640, 360))
                         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        imgRegion = cv2.bitwise_and(frame, imgMask)
+                        imgRegion = cv2.bitwise_and(frame, self.imgMask)
 
                         # Detect Object Car Type
                         result = model(imgRegion)
@@ -760,7 +786,7 @@ class CountCamera(tk.Frame):
                         bbox_id = tracker.update(list_obj)
 
                         # Create line counter
-                        cv2.line(frame, (limits[0], limits[1]), (limits[2], limits[3]), (0, 255, 0), 2)
+                        cv2.line(frame, (self.limits[0], self.limits[1]), (self.limits[2], self.limits[3]), (0, 255, 0), 2)
                         for bbox in bbox_id:
                             x3, y3, x4, y4, id, cls, conf = bbox
                             cx = int(x3 + x4) // 2
@@ -776,7 +802,7 @@ class CountCamera(tk.Frame):
                             cvzone.putTextRect(frame, f'{conf:0.2f} {class_list[cls]}', (max(0, x3), max(35, y3)), 1, 1, 3)
 
                             # Counting Car
-                            if limits[0] < cx < limits[2] and limits[1] - 20 < cy < limits[1] + 20:
+                            if self.limits[0] < cx < self.limits[2] and self.limits[1] - 20 < cy < self.limits[1] + 20:
                                 if self.totalCount.count(id) == 0:
                                     self.totalCount.append(id)
                                     self.count_car_type[cls].add(id)  # add id to dict {count_car_type}
@@ -810,6 +836,8 @@ class CountCamera(tk.Frame):
                         cv2.waitKey(1)
             except Exception as e:
                 tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
+
+
 
 
 if __name__ == "__main__":
