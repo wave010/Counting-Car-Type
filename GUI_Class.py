@@ -13,7 +13,11 @@ from datetime import datetime
 import re
 import pymongo
 from configparser import ConfigParser
-
+# ---------------------------------------------------
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+# ---------------------------------------------------
 
 class MyApp:
     def __init__(self, root):
@@ -37,7 +41,7 @@ class MyApp:
         self.pages = {}
 
         # Create and add pages to the dictionary
-        for PageClass in (Home, Setting, CountVideo, CountCamera):
+        for PageClass in (Home, Setting, CountVideo, CountCamera, DashBoard):
             page_name = PageClass.__name__
             page = PageClass(self.container, self)
             self.pages[page_name] = page
@@ -61,10 +65,11 @@ class Home(tk.Frame):
 
         # add widget
         Label(self, text="Count Car Type", font=('Tomato', 20, 'bold')).pack(pady=15)
-        Button(self, text="Counting From Camera", width=40, pady=30, font=('Tomato', 10, 'bold'), bd=3, command=lambda: controller.show_page("CountCamera")).pack(pady=10)
-        Button(self, text="Counting From Video", width=40, pady=30, font=('Tomato', 10, 'bold'), bd=3,  command=lambda: controller.show_page("CountVideo")).pack(pady=10)
-        Button(self, text="Setting", width=40, pady=30, font=('Tomato', 10, 'bold'), bd=3, command=lambda: controller.show_page("Setting")).pack(pady=10)
-        Button(self, text="Exit", width=40, pady=30, font=('Tomato', 10, 'bold', 'underline'), bd=3, command=lambda: self.quit()).pack(pady=10)
+        Button(self, text="Counting From Camera", width=30, pady=20, font=('Tomato', 10, 'bold'), bd=3, command=lambda: controller.show_page("CountCamera")).pack(pady=2)
+        Button(self, text="Counting From Video", width=30, pady=20, font=('Tomato', 10, 'bold'), bd=3,  command=lambda: controller.show_page("CountVideo")).pack(pady=2)
+        Button(self, text="Dashboard", width=30, pady=20, font=('Tomato', 10, 'bold'), bd=3, command=lambda: controller.show_page("DashBoard")).pack(pady=2)
+        Button(self, text="Setting", width=30, pady=20, font=('Tomato', 10, 'bold'), bd=3, command=lambda: controller.show_page("Setting")).pack(pady=2)
+        Button(self, text="Exit", width=30, pady=20, font=('Tomato', 10, 'bold', 'underline'), bd=3, command=lambda: self.quit()).pack(pady=2)
 
 
 class Setting(tk.Frame):
@@ -223,7 +228,6 @@ class CountVideo(tk.Frame):
         Button(self, text="Play", command=lambda: playCountCar()).grid(row=2, column=0, sticky='w', padx=10)
         path_video_lb = Label(self, text="Video Path : ")
         path_video_lb.grid(row=2, column=1, sticky='w')
-        # Label(self, text=self.path).grid(row=2, column=2) # show path to selection count
         # ---------------------------------------------------------------
 
         # --- Frame Show image
@@ -838,6 +842,139 @@ class CountCamera(tk.Frame):
                         cv2.waitKey(1)
             except Exception as e:
                 tk.messagebox.showwarning("Warning", "Error ! : "+ str(e))
+
+
+class DashBoard(tk.Frame):
+        def __init__(self, parent, controller):
+            tk.Frame.__init__(self, parent)
+            self.controller = controller
+            self.path = ""
+            # add widget
+            Label(self, text="Counting Car type From Camera", font=('Tomato', 10, 'bold')).grid(row=0, column=0, sticky='N', pady=5, columnspan=3)
+
+            # --- Button Back to home page
+            bu_frame = Frame(self)
+            bu_frame.grid(row=1, column=0, sticky='w', padx=10)
+            Button(bu_frame, width=10, text="Back", command=lambda: controller.show_page("Home")).grid(row=0, column=0, pady=3)
+            Button(bu_frame, width=10, text="Select File", command=lambda: selectFile()).grid(row=0, column=1, pady=3)
+
+            self.la_path = Label(bu_frame, text="File Path: ")
+            self.la_path.grid(row=0, column=2, pady=5)
+
+            Button(bu_frame, text="Plot", width=10, command=lambda: plot()).grid(row=2, column=0, padx=10)
+            Button(bu_frame, text="Plot2", width=10, command=lambda: plot1()).grid(row=2, column=1, padx=10)
+            # ------- plot dashboard
+            plot_frame = Frame(self)
+            plot_frame.grid(row=2, column=0, sticky='w', padx=10)
+
+            def plot():
+                try:
+                    if len(self.path) > 0:
+
+                        # Delete all widgets in plot_frame
+                        for widget in plot_frame.winfo_children():
+                            widget.destroy()
+
+                        # Read Data
+                        self.df_video = pd.read_excel(self.path, sheet_name='video info')
+                        self.df_log = pd.read_excel(self.path, sheet_name='Counting log')
+                        self.df_sum_car = pd.read_excel(self.path, sheet_name='Summary of car types')
+
+                        #  ---------------- plot
+                        # the figure that will contain the plot
+                        plt.subplots_adjust(wspace=0.5)
+                        fig = Figure(figsize=(10, 4), dpi=100)
+
+                        # adding the subplot
+                        plot1 = fig.add_subplot(121)
+                        plot2 = fig.add_subplot(122)
+
+                        # plotting the graph
+                        plot1.pie(self.df_sum_car['counts'], labels=self.df_sum_car['type_name'], textprops={'fontsize': 6})
+                        plot1.set_title("Total of Car Type Pie Chart", fontsize=6)
+
+                        x_values = range(len(self.df_sum_car['type_name']))  # Generating x-values
+                        plot2.bar(x_values, self.df_sum_car['counts'], width=1)
+                        plot2.set_xticks(x_values)  # Setting x-ticks to be at the center of each bar
+                        plot2.set_xticklabels(self.df_sum_car['type_name'], fontsize=6, rotation=15)  # Setting x-tick labels with rotation
+                        plot2.set_title("Total of Car Type Bar", fontsize=6)
+                        plot2.set_xlabel('Car Type', fontsize=6)
+                        plot2.set_ylabel('Count', fontsize=6)
+
+                        # creating the Tkinter canvas
+                        # containing the Matplotlib figure
+                        canvas = FigureCanvasTkAgg(fig, master=plot_frame)
+                        canvas.draw()
+
+                        # placing the canvas on the Tkinter window
+                        canvas.get_tk_widget().pack()
+
+                        # creating the Matplotlib toolbar
+                        toolbar = NavigationToolbar2Tk(canvas, plot_frame)
+                        toolbar.update()
+
+                        # placing the toolbar on the Tkinter window
+                        canvas.get_tk_widget().pack()
+                    else:
+                        tk.messagebox.showwarning("Warning", "Pls, Select File For Plot Graph")
+                except Exception as e:
+                    print(str(e))
+                    tk.messagebox.showwarning("Warning", "Error ! : " + str(e))
+
+            def plot1():
+                try:
+                    if len(self.path) > 0:
+
+                        # Delete all widgets in plot_frame
+                        for widget in plot_frame.winfo_children():
+                            widget.destroy()
+
+                        # Read Data
+                        self.df_log = pd.read_excel(self.path, sheet_name='Counting log')
+                        #  ---------------- plot
+                        # the figure that will contain the plot
+                        fig = plt.figure(figsize=(10, 4))
+                        plt.scatter(self.df_log['cx'].values, self.df_log['cy'].values, color='red', marker='*')
+                        self.bg_img = plt.imread('SourceData/frameV2.jpg')
+                        plt.imshow(self.bg_img, extent=[0, 640, 0, 360])
+
+                        plt.xlim(0, 640)
+                        plt.ylim(0, 360)
+
+                        plt.xlabel('cx')
+                        plt.ylabel('cy')
+
+                        # creating the Tkinter canvas
+                        # containing the Matplotlib figure
+                        canvas = FigureCanvasTkAgg(fig, master=plot_frame)
+                        canvas.draw()
+
+                        # placing the canvas on the Tkinter window
+                        canvas.get_tk_widget().pack()
+
+                        # creating the Matplotlib toolbar
+                        toolbar = NavigationToolbar2Tk(canvas, plot_frame)
+                        toolbar.update()
+
+                        # placing the toolbar on the Tkinter window
+                        canvas.get_tk_widget().pack()
+                    else:
+                        tk.messagebox.showwarning("Warning", "Pls, Select File For Plot Graph")
+                except Exception as e:
+                    print(str(e))
+                    tk.messagebox.showwarning("Warning", "Error ! : " + str(e))
+
+            def selectFile():
+                try:
+                    data_path = filedialog.askopenfilename(filetypes=[
+                        ("all Excel format", "xlsx")])
+                    if len(data_path) > 0:
+                        self.path = data_path
+                        self.la_path.config(text="File Path: "+ self.path)
+                    else:
+                        self.la_path.config(text="Select your File")
+                except Exception as e:
+                    tk.messagebox.showwarning("Warning", "Error ! : " + str(e))
 
 
 if __name__ == "__main__":
